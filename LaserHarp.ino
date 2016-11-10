@@ -10,23 +10,37 @@
     @version 0.1
 */
 
-const int sensor          = 8;    // Sensitivity of the Light Sensor
-const int delaylaser      = 5;    // Miliseconds the laser should be turned on. If you increase this, the laser will be brighter, but the harp will be less fluid
-const int delaymotor      = 3;    // Miliseconds the motor should be delayed after laser interaction. This variable affects the speed, and fluidity of the harp.
+const int sensor        = 8;    // Sensitivity of the Light Sensor
+const int delaylaser    = 5;    // Miliseconds the laser should be turned on. If you increase this, the laser will be brighter, but the harp will be less fluid
+const int delaymotor    = 3;    // Miliseconds the motor should be delayed after laser interaction. This variable affects the speed, and fluidity of the harp.
 
-const int buttonPinUp     = 6;
-const int buttonPinDown   = 5;
+const int octavePinUp   = 6;    // Send a signal over this port to up the octave number
+const int octavePinDown = 5;    // Send a signal over this port to lower the octave number
 
-const int laserPin        = 7;   // GPIO pin the laser is on
+const int laserPin      = 7;    // GPIO pin the laser is on
 
-const int motorPin1       = 8;    // 1st GPIO pin for the stepper motor
-const int motorPin2       = 9;    // 2nd GPIO pin for the stepper motor
-const int motorPin3       = 10;   // 3rd GPIO pin for the stepper motor
-const int motorPin4       = 11;   // 4rd GPIO pin for the stepper motor
+const int motorPin1     = 8;    // 1st GPIO pin for the stepper motor
+const int motorPin2     = 9;    // 2nd GPIO pin for the stepper motor
+const int motorPin3     = 10;   // 3rd GPIO pin for the stepper motor
+const int motorPin4     = 11;   // 4rd GPIO pin for the stepper motor
 
-const int buzzerPin       = 13;   // GPIO pin the busser is on
+const int buzzerPin     = 13;   // GPIO pin the busser is on
 
-int ladder[9] = {130,138,146,155,164,174,185,196,207};
+double ladder[12] = {
+    130.82, // STEP 1
+    138.59, // STEP 2
+    146.83, // STEP 3
+    155.56, // STEP 4
+    164.81, // STEP 5
+    174.61, // STEP 6
+    185,    // STEP 7
+    196,    // STEP 8
+    207.65, // STEP 9
+    220,    // STEP 10
+    233.08, // STEP 11
+    246.94  // STEP 12
+};
+
 int octave = 2;
 
 int previousUpState = LOW;
@@ -44,9 +58,15 @@ int steps[16][6] = {
 	{0, 5, LOW, HIGH, LOW, LOW} // STEP 6
 	{0, 6, LOW, LOW, HIGH, LOW} // STEP 7
 	{0, 7, LOW, LOW, LOW, HIGH} // STEP 8
+	{0, 8, HIGH, LOW, LOW, LOW} // STEP 9
+	{0, 9, LOW, HIGH, LOW, LOW} // STEP 10
+	{0, 10, LOW, LOW, HIGH, LOW} // STEP 11
 
+	{0, 11, LOW, HIGH, LOW,  LOW} // STEP 12
+
+	{0, 10, HIGH, LOW, LOW, LOW} // STEP 11
+	{0, 9, LOW, LOW, LOW, HIGH} // STEP 10
 	{0, 8, LOW, LOW, HIGH, LOW} // STEP 9
-
 	{0, 7, LOW, HIGH, LOW, LOW} // STEP 8
 	{0, 6, HIGH, LOW, LOW, LOW} // STEP 7
 	{0, 5, LOW, LOW, LOW, HIGH} // STEP 6
@@ -101,7 +121,7 @@ void performStep(int &stepActive, int note, int motorPin1Val, int motorPin2Val, 
     // If the sensor is picking something up and the step is not yet active, perform a buzzer and set the step to active
 	if ( (analogRead(0) > sensor ) && (stepActive == 0) ) {
 		digitalWrite(13, HIGH);
-		tone(buzzerPin, ladder[note] * pow(2^octave));
+		tone(buzzerPin, round(ladder[note] * pow(2^octave)));
 		stepActive++;
 	// If the sensor is not picking up anything, disable this step and kill the buzzer
 	} else if(analogRead(0) < sensor ) {
@@ -128,7 +148,7 @@ void performStep(int &stepActive, int note, int motorPin1Val, int motorPin2Val, 
 */
 void loop()
 {
-	for (int i = 0; i < 16; i++) {
+	for (int i = 0; i < sizeof(steps); i++) {
 		var data = &steps[i];
 		performStep(data[0], data[1], data[2], data[3], data[4], data[5]);
 	}
@@ -142,7 +162,7 @@ void loop()
 */
 void shouldOctaveUp()
 {
-    upState = digitalRead(buttonPinUp);
+    upState = digitalRead(octavePinUp);
 
     if (upState == HIGH) {
         if (previousUpState == LOW) {
@@ -159,7 +179,7 @@ void shouldOctaveUp()
 */
 void shouldOctaveDown()
 {
-    downState = digitalRead(buttonPinDown);
+    downState = digitalRead(octavePinDown);
 
     if (downState == HIGH) {
             if (previousDownState == LOW) {
