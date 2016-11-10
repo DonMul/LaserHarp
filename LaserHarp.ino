@@ -10,41 +10,50 @@
     @version 0.1
 */
 
-int sensor      = 8;    // Sensitivity of the Light Sensor
-int delaylaser  = 5;    // Miliseconds the laser should be turned on. If you increase this, the laser will be brighter, but the harp will be less fluid
-int delaymotor  = 3;    // Miliseconds the motor should be delayed after laser interaction. This variable affects the speed, and fluidity of the harp.
+const int sensor          = 8;    // Sensitivity of the Light Sensor
+const int delaylaser      = 5;    // Miliseconds the laser should be turned on. If you increase this, the laser will be brighter, but the harp will be less fluid
+const int delaymotor      = 3;    // Miliseconds the motor should be delayed after laser interaction. This variable affects the speed, and fluidity of the harp.
 
-int laserPin    =  7;   // GPIO pin the laser is on
+const int buttonPinUp     = 6;
+const int buttonPinDown   = 5;
 
-int motorPin1   = 8;    // 1st GPIO pin for the stepper motor
-int motorPin2   = 9;    // 2nd GPIO pin for the stepper motor
-int motorPin3   = 10;   // 3rd GPIO pin for the stepper motor
-int motorPin4   = 11;   // 4rd GPIO pin for the stepper motor
+const int laserPin        = 7;   // GPIO pin the laser is on
 
-int buzzerPin   = 13;   // GPIO pin the busser is on
+const int motorPin1       = 8;    // 1st GPIO pin for the stepper motor
+const int motorPin2       = 9;    // 2nd GPIO pin for the stepper motor
+const int motorPin3       = 10;   // 3rd GPIO pin for the stepper motor
+const int motorPin4       = 11;   // 4rd GPIO pin for the stepper motor
+
+const int buzzerPin       = 13;   // GPIO pin the busser is on
+
+int ladder[9] = {130,138,146,155,164,174,185,196,207};
+int octave = 2;
+
+int previousUpState = LOW;
+int previousDownState = LOW;
 
 // Collection of steps in order. Every step exists from the following data:
-// stepActivated, hertz, motorPin1Value, motorPin2Value, motorPin3Value, motorPin4Value
+// stepActivated, step in the ladder, motorPin1Value, motorPin2Value, motorPin3Value, motorPin4Value
 int steps[16][6] = {
-	{0, 261, HIGH, LOW, LOW, LOW} // STEP 1
+	{0, 0, HIGH, LOW, LOW, LOW} // STEP 1
 
-	{0, 277, LOW, HIGH, LOW, LOW} // STEP 2
-	{0, 293, LOW, LOW, HIGH, LOW} // STEP 3
-	{0, 311, LOW, LOW, LOW, HIGH} // STEP 4
-	{0, 329, HIGH, LOW, LOW, LOW} // STEP 5
-	{0, 349, LOW, HIGH, LOW, LOW} // STEP 6
-	{0, 369, LOW, LOW, HIGH, LOW} // STEP 7
-	{0, 392, LOW, LOW, LOW, HIGH} // STEP 8
+	{0, 1, LOW, HIGH, LOW, LOW} // STEP 2
+	{0, 2, LOW, LOW, HIGH, LOW} // STEP 3
+	{0, 3, LOW, LOW, LOW, HIGH} // STEP 4
+	{0, 4, HIGH, LOW, LOW, LOW} // STEP 5
+	{0, 5, LOW, HIGH, LOW, LOW} // STEP 6
+	{0, 6, LOW, LOW, HIGH, LOW} // STEP 7
+	{0, 7, LOW, LOW, LOW, HIGH} // STEP 8
 
-	{0, 415, LOW, LOW, HIGH, LOW} // STEP 9
+	{0, 8, LOW, LOW, HIGH, LOW} // STEP 9
 
-	{0, 392, LOW, HIGH, LOW, LOW} // STEP 8
-	{0, 369, HIGH, LOW, LOW, LOW} // STEP 7
-	{0, 349, LOW, LOW, LOW, HIGH} // STEP 6
-	{0, 329, LOW, LOW, HIGH, LOW} // STEP 5
-	{0, 311, LOW, HIGH, LOW, LOW} // STEP 4
-	{0, 293, HIGH, LOW, LOW, LOW} // STEP 3
-	{0, 277, LOW, LOW, LOW, HIGH} // STEP 2
+	{0, 7, LOW, HIGH, LOW, LOW} // STEP 8
+	{0, 6, HIGH, LOW, LOW, LOW} // STEP 7
+	{0, 5, LOW, LOW, LOW, HIGH} // STEP 6
+	{0, 4, LOW, LOW, HIGH, LOW} // STEP 5
+	{0, 3, LOW, HIGH, LOW, LOW} // STEP 4
+	{0, 2, HIGH, LOW, LOW, LOW} // STEP 3
+	{0, 1, LOW, LOW, LOW, HIGH} // STEP 2
 };
 
 /**
@@ -63,6 +72,9 @@ void setup()
 
 	// Enable the pin used by the buzzer
 	pinMode(buzzerPin, OUTPUT);
+
+	pinMode(buttonPinUp, INPUT);
+	pinMode(buttonPinDown, INPUT);
 
 	// Enable the blinking led
 	pinMode(13, OUTPUT);
@@ -89,7 +101,7 @@ void performStep(int &stepActive, int note, int motorPin1Val, int motorPin2Val, 
     // If the sensor is picking something up and the step is not yet active, perform a buzzer and set the step to active
 	if ( (analogRead(0) > sensor ) && (stepActive == 0) ) {
 		digitalWrite(13, HIGH);
-		tone(buzzerPin, note);
+		tone(buzzerPin, ladder[note] * pow(2^octave));
 		stepActive++;
 	// If the sensor is not picking up anything, disable this step and kill the buzzer
 	} else if(analogRead(0) < sensor ) {
@@ -120,4 +132,41 @@ void loop()
 		var data = &steps[i];
 		performStep(data[0], data[1], data[2], data[3], data[4], data[5]);
 	}
+
+	shouldOctaveUp();
+	shouldOctaveDown();
+}
+
+/**
+    Check if octave must go up (With a max of 9)
+*/
+void shouldOctaveUp()
+{
+    upState = digitalRead(buttonPinUp);
+
+    if (upState == HIGH) {
+        if (previousUpState == LOW) {
+            octave = min(octave+1,9);
+            previousUpState = HIGH
+        }
+    } else {
+        previousUpState = LOW
+    }
+}
+
+/**
+    Check if octave must go down (With a min of 1)
+*/
+void shouldOctaveDown()
+{
+    downState = digitalRead(buttonPinDown);
+
+    if (downState == HIGH) {
+            if (previousDownState == LOW) {
+                octave = max(octave-1,1);
+                previousDownState = HIGH
+            }
+        } else {
+            previousDownState = LOW
+        }
 }
